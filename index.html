@@ -6,11 +6,16 @@
     <title>Plataforma de Cursos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Quill Rich Text Editor -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         .module-completed { text-decoration: line-through; color: #9ca3af; }
         #loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Quill Editor Height */
+        .ql-container { height: 300px; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -37,15 +42,11 @@
             <div><h1 class="text-3xl md:text-4xl font-bold text-gray-900">Mis Cursos</h1><p id="selection-user-email" class="text-gray-600 mt-2"></p></div>
             <button id="logout-button-selection" class="px-4 py-2 font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700">Cerrar Sesión</button>
         </header>
-        <div id="course-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Los cursos se insertarán aquí -->
-        </div>
+        <div id="course-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
     </div>
 
-    <!-- Contenido Principal del Curso (Oculto por defecto) -->
-    <div id="app-container" class="hidden container mx-auto p-4 md:p-8">
-        <!-- El contenido se genera dinámicamente -->
-    </div>
+    <!-- Contenido Principal del Curso -->
+    <div id="app-container" class="hidden container mx-auto p-4 md:p-8"></div>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -53,7 +54,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // TU CONFIGURACIÓN DE FIREBASE HA SIDO INSERTADA AQUÍ
         const firebaseConfig = {
             apiKey: "AIzaSyD3bq6JJNZRjwDiF4FIMq7ZlWM-DI2YIqE",
             authDomain: "mis-cursos-geologia.firebaseapp.com",
@@ -68,7 +68,6 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // --- MANEJO DE ESTADO DE LA UI ---
         const authContainer = document.getElementById('auth-container');
         const courseSelectionContainer = document.getElementById('course-selection-container');
         const appContainer = document.getElementById('app-container');
@@ -87,13 +86,11 @@
             }
         });
 
-        // --- LÓGICA DE AUTENTICACIÓN ---
         const loginForm = document.getElementById('login-form');
         const authError = document.getElementById('auth-error');
         loginForm.addEventListener('submit', e => { e.preventDefault(); auth.signInWithEmailAndPassword(loginForm['login-email'].value, loginForm['login-password'].value).catch(err => { authError.textContent = err.message; authError.classList.remove('hidden'); }); });
         document.getElementById('logout-button-selection').addEventListener('click', () => auth.signOut());
 
-        // --- DATOS DE TODOS LOS CURSOS ---
         const courses = {
             'curso-geoquimica': {
                 title: 'Curso: Geoquímica Aplicada',
@@ -119,7 +116,6 @@
             }
         };
 
-        // --- PANTALLA DE SELECCIÓN DE CURSO ---
         function renderCourseSelection(user) {
             const courseList = document.getElementById('course-list');
             courseList.innerHTML = '';
@@ -137,38 +133,47 @@
             }
         }
 
-        // --- LÓGICA PRINCIPAL DE LA APP ---
-        function initializeApp(user, courseId) {
+        async function initializeApp(user, courseId) {
             const course = courses[courseId];
             if (!course || course.type !== 'video') return;
 
-            // --- LÓGICA COMÚN ---
             let progressData = [];
             const progressDocRef = db.collection('users').doc(user.uid).collection('progress').doc(courseId);
 
             async function loadProgress() {
                 const doc = await progressDocRef.get();
+                let loadedModules = [];
                 if (doc.exists && doc.data().modules) {
-                    progressData = doc.data().modules;
-                } else {
-                    // Inicializa la estructura de progreso si no existe
-                    progressData = course.data.map(item => ({ 
-                        ...item, 
-                        submodules: generateSubmodules(item.id, item.duration).map(sub => ({...sub, completed: false}))
-                    }));
+                    loadedModules = doc.data().modules;
                 }
+                
+                // Merge course data with loaded progress to ensure structure is always up-to-date
+                progressData = course.data.map(courseModule => {
+                    const savedModule = loadedModules.find(m => m.id === courseModule.id);
+                    const submodules = generateSubmodules(courseModule.id, courseModule.duration);
+                    
+                    if (savedModule) {
+                        submodules.forEach(sub => {
+                            const savedSub = savedModule.submodules.find(s => s.id === sub.id);
+                            sub.completed = savedSub ? savedSub.completed : false;
+                        });
+                    } else {
+                         submodules.forEach(sub => sub.completed = false);
+                    }
+                    
+                    return { ...courseModule, submodules, notes: savedModule ? savedModule.notes : '' };
+                });
             }
 
             async function saveProgress() {
-                // Guardamos solo los datos relevantes para evitar sobreescribir con datos de la UI
                 const dataToSave = progressData.map(module => ({
                     id: module.id,
+                    notes: module.notes || '',
                     submodules: module.submodules.map(sub => ({ id: sub.id, completed: sub.completed }))
                 }));
                 await progressDocRef.set({ modules: dataToSave });
             }
             
-            // --- RENDERIZADOR DEL VISOR DE VIDEO ---
             appContainer.innerHTML = `
                 <header class="mb-8 flex justify-between items-center">
                     <div><h1 class="text-3xl md:text-4xl font-bold text-gray-900">${course.title}</h1><p class="text-gray-600 mt-2">Sesión iniciada como: ${user.email}</p></div>
@@ -176,13 +181,13 @@
                 </header>
                 <div class="mb-8"><div class="flex justify-between mb-1"><span class="text-base font-medium text-blue-700">Progreso Total</span><span id="progress-text" class="text-sm font-medium text-blue-700">0%</span></div><div class="w-full bg-gray-200 rounded-full h-4"><div id="progress-bar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div></div></div>
                 <div class="flex flex-col lg:flex-row gap-8">
-                    <main class="w-full lg:w-2/3"><div class="aspect-w-16 aspect-h-9 bg-black rounded-lg shadow-lg overflow-hidden"><iframe id="video-player" class="w-full h-full" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div><div class="mt-4 p-4 bg-white rounded-lg shadow"><h2 id="video-title" class="text-2xl font-bold"></h2><p class="text-gray-600 mt-2">Selecciona un submódulo para comenzar.</p></div></main>
-                    <aside class="w-full lg:w-1/3 bg-white p-4 sm:p-6 rounded-lg shadow-lg"><h3 class="text-xl font-bold mb-4 border-b pb-2">Clases y Submódulos</h3><div id="video-modules" class="space-y-4 h-[70vh] overflow-y-auto pr-2"></div></aside>
+                    <main class="w-full lg:w-3/5"><div class="aspect-w-16 aspect-h-9 bg-black rounded-lg shadow-lg overflow-hidden"><iframe id="video-player" class="w-full h-full" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div><div class="mt-4 p-4 bg-white rounded-lg shadow"><h2 id="video-title" class="text-2xl font-bold"></h2><p class="text-gray-600 mt-2">Selecciona un submódulo para comenzar.</p></div></main>
+                    <aside class="w-full lg:w-2/5 bg-white p-4 sm:p-6 rounded-lg shadow-lg"><h3 class="text-xl font-bold mb-4 border-b pb-2">Clases y Submódulos</h3><div id="video-modules" class="space-y-4 h-[80vh] overflow-y-auto pr-2"></div></aside>
                 </div>`;
 
             document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
             document.getElementById('back-to-courses').addEventListener('click', () => {
-                appContainer.innerHTML = ''; // Limpiar la UI del curso
+                appContainer.innerHTML = '';
                 appContainer.classList.add('hidden');
                 courseSelectionContainer.classList.remove('hidden');
             });
@@ -237,8 +242,12 @@
                     const titleContainer = document.createElement('div');
                     titleContainer.className = 'p-3 bg-gray-50 hover:bg-gray-200 cursor-pointer flex justify-between items-center';
                     titleContainer.innerHTML = `<h4 class="font-semibold">${module.title}</h4><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+                    
+                    const contentContainer = document.createElement('div');
+                    contentContainer.className = 'p-4 space-y-4 bg-white hidden';
+                    
                     const submodulesList = document.createElement('ul');
-                    submodulesList.className = 'p-4 space-y-3 bg-white hidden';
+                    submodulesList.className = 'space-y-3';
                     
                     module.submodules.forEach((submodule, subIndex) => {
                         const item = document.createElement('li');
@@ -263,37 +272,51 @@
                         const watchButton = document.createElement('button');
                         watchButton.textContent = 'Ver';
                         watchButton.className = 'ml-4 bg-blue-500 text-white px-3 py-1 rounded-md text-xs';
-                        watchButton.onclick = () => changeVideo(module.videoId, submodule.startTime, module.title);
+                        watchButton.onclick = () => changeVideo(module.videoId, module.submodules[subIndex].startTime, module.title);
                         checkboxLabelWrapper.append(checkbox, label);
                         item.append(checkboxLabelWrapper, watchButton);
                         submodulesList.appendChild(item);
                     });
                     
+                    // Notes Editor
+                    const notesHeader = document.createElement('h5');
+                    notesHeader.className = 'font-semibold mt-4 pt-4 border-t';
+                    notesHeader.textContent = 'Mis Apuntes para esta Clase';
+                    const editorContainer = document.createElement('div');
+                    editorContainer.id = `editor-${module.id}`;
+                    
+                    contentContainer.append(submodulesList, notesHeader, editorContainer);
+                    
                     titleContainer.addEventListener('click', () => {
-                        submodulesList.classList.toggle('hidden');
+                        contentContainer.classList.toggle('hidden');
                         titleContainer.querySelector('svg').classList.toggle('rotate-180');
                     });
-                    moduleElement.append(titleContainer, submodulesList);
+                    moduleElement.append(titleContainer, contentContainer);
                     modulesContainer.appendChild(moduleElement);
+
+                    // Initialize Quill Editor
+                    const quill = new Quill(`#editor-${module.id}`, {
+                        theme: 'snow',
+                        placeholder: 'Escribe tus notas aquí...'
+                    });
+                    if (module.notes) {
+                        quill.root.innerHTML = module.notes;
+                    }
+
+                    // Auto-save notes
+                    let timeout;
+                    quill.on('text-change', () => {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(async () => {
+                            progressData[moduleIndex].notes = quill.root.innerHTML;
+                            await saveProgress();
+                        }, 1000); // Save 1 second after user stops typing
+                    });
                 });
             }
 
             async function init() {
                 await loadProgress();
-                
-                // Sincronizar la estructura de submódulos con los datos guardados
-                progressData.forEach((module, index) => {
-                    const courseModuleData = course.data.find(m => m.id === module.id);
-                    if (courseModuleData) {
-                        const freshSubmodules = generateSubmodules(module.id, courseModuleData.duration);
-                        freshSubmodules.forEach(freshSub => {
-                            const savedSub = module.submodules.find(s => s.id === freshSub.id);
-                            freshSub.completed = savedSub ? savedSub.completed : false;
-                        });
-                        progressData[index].submodules = freshSubmodules;
-                    }
-                });
-
                 renderModules();
                 updateProgressBar();
                 if(course.data.length > 0) {
