@@ -3,254 +3,306 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma de Curso Interactivo</title>
+    <title>Plataforma de Cursos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        /* Estilo para la barra de scroll */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        .task-completed {
-            text-decoration: line-through;
-            color: #9ca3af;
-        }
+        body { font-family: 'Inter', sans-serif; }
+        .module-completed { text-decoration: line-through; color: #9ca3af; }
+        #loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <div class="container mx-auto p-4 md:p-8">
-        <!-- Encabezado -->
-        <header class="mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Mi Progreso en el Curso</h1>
-            <p class="text-gray-600 mt-2">Completa cada submódulo para avanzar. ¡Divide y vencerás!</p>
-        </header>
-
-        <!-- Barra de Progreso General -->
-        <div class="mb-8">
-            <div class="flex justify-between mb-1">
-                <span class="text-base font-medium text-blue-700">Progreso Total</span>
-                <span id="progress-text" class="text-sm font-medium text-blue-700">0%</span>
+    <!-- Pantalla de Autenticación -->
+    <div id="auth-container" class="flex items-center justify-center min-h-screen">
+        <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+            <div><h2 class="text-2xl font-bold text-center">Plataforma de Cursos</h2><p class="text-center text-gray-600">Inicia sesión para acceder a los cursos.</p></div>
+            <form id="login-form" class="space-y-6">
+                <input id="login-email" type="email" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Correo electrónico">
+                <input id="login-password" type="password" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contraseña">
+                <button type="submit" class="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">Iniciar Sesión</button>
+            </form>
+            <div class="text-center">
+                <p id="auth-error" class="text-red-500 text-sm mb-4 hidden"></p>
+                <p class="text-sm text-gray-600">Por favor, introduce las credenciales proporcionadas.</p>
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-4">
-                <div id="progress-bar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
-            </div>
-        </div>
-
-        <!-- Contenido Principal (Video y Lista de Clases) -->
-        <div class="flex flex-col lg:flex-row gap-8">
-
-            <!-- Columna de Video -->
-            <main class="w-full lg:w-2/3">
-                <div class="aspect-w-16 aspect-h-9 bg-black rounded-lg shadow-lg overflow-hidden">
-                    <iframe id="video-player" class="w-full h-full" src="https://www.youtube.com/embed/dnb9A-x3_Gw" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe>
-                </div>
-                <div class="mt-4 p-4 bg-white rounded-lg shadow">
-                    <h2 id="video-title" class="text-2xl font-bold">Clase 1: Geoquímica Aplicada</h2>
-                    <p id="video-description" class="text-gray-600 mt-2">Selecciona un submódulo de la lista para comenzar a ver la clase en un punto específico.</p>
-                </div>
-            </main>
-
-            <!-- Columna de Clases y Tareas -->
-            <aside class="w-full lg:w-1/3 bg-white p-4 sm:p-6 rounded-lg shadow-lg">
-                <h3 class="text-xl font-bold mb-4 border-b pb-2">Módulos del Curso</h3>
-                <div id="course-modules" class="space-y-4 h-[60vh] overflow-y-auto pr-2">
-                    <!-- Los módulos se insertarán aquí dinámicamente -->
-                </div>
-            </aside>
         </div>
     </div>
 
+    <!-- Pantalla de Selección de Curso -->
+    <div id="course-selection-container" class="hidden container mx-auto p-8">
+        <header class="mb-8 flex justify-between items-center">
+            <div><h1 class="text-3xl md:text-4xl font-bold text-gray-900">Mis Cursos</h1><p id="selection-user-email" class="text-gray-600 mt-2"></p></div>
+            <button id="logout-button-selection" class="px-4 py-2 font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700">Cerrar Sesión</button>
+        </header>
+        <div id="course-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Los cursos se insertarán aquí -->
+        </div>
+    </div>
+
+    <!-- Contenido Principal del Curso (Oculto por defecto) -->
+    <div id="app-container" class="hidden container mx-auto p-4 md:p-8">
+        <!-- El contenido se genera dinámicamente -->
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- FUNCIÓN DE UTILIDAD ---
-            // Formatea segundos a un string de tiempo HH:MM:SS o MM:SS
-            function formatTime(totalSeconds) {
-                const hours = Math.floor(totalSeconds / 3600);
-                const minutes = Math.floor((totalSeconds % 3600) / 60);
-                const seconds = totalSeconds % 60;
+        // TU CONFIGURACIÓN DE FIREBASE HA SIDO INSERTADA AQUÍ
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3bq6JJNZRjwDiF4FIMq7ZlWM-DI2YIqE",
+            authDomain: "mis-cursos-geologia.firebaseapp.com",
+            projectId: "mis-cursos-geologia",
+            storageBucket: "mis-cursos-geologia.firebasestorage.app",
+            messagingSenderId: "885077969113",
+            appId: "1:885077969113:web:3900c2b1d937381e5bd6c8",
+            measurementId: "G-9586YPY76P"
+        };
 
-                const pad = (num) => num.toString().padStart(2, '0');
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
-                if (hours > 0) {
-                    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        // --- MANEJO DE ESTADO DE LA UI ---
+        const authContainer = document.getElementById('auth-container');
+        const courseSelectionContainer = document.getElementById('course-selection-container');
+        const appContainer = document.getElementById('app-container');
+        
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                authContainer.classList.add('hidden');
+                appContainer.classList.add('hidden');
+                courseSelectionContainer.classList.remove('hidden');
+                document.getElementById('selection-user-email').textContent = `Sesión iniciada como: ${user.email}`;
+                renderCourseSelection(user);
+            } else {
+                authContainer.classList.remove('hidden');
+                courseSelectionContainer.classList.add('hidden');
+                appContainer.classList.add('hidden');
+            }
+        });
+
+        // --- LÓGICA DE AUTENTICACIÓN ---
+        const loginForm = document.getElementById('login-form');
+        const authError = document.getElementById('auth-error');
+        loginForm.addEventListener('submit', e => { e.preventDefault(); auth.signInWithEmailAndPassword(loginForm['login-email'].value, loginForm['login-password'].value).catch(err => { authError.textContent = err.message; authError.classList.remove('hidden'); }); });
+        document.getElementById('logout-button-selection').addEventListener('click', () => auth.signOut());
+
+        // --- DATOS DE TODOS LOS CURSOS ---
+        const courses = {
+            'curso-geoquimica': {
+                title: 'Curso: Geoquímica Aplicada',
+                type: 'video',
+                data: [
+                    { id: 'geo-clase-1', title: 'Clase 1 Geoquímica Aplicada', videoId: 'dnb9A-x3_Gw', duration: 9953 },
+                    { id: 'geo-clase-2', title: 'Clase 2 Geoquímica Aplicada', videoId: 'VjlyimLC8dI', duration: 10178 },
+                    { id: 'geo-clase-3', title: 'Clase 3 Geoquímica', videoId: '2y6ZRW6X2Ow', duration: 10359 },
+                    { id: 'geo-clase-4', title: 'Clase 4 Geoquímica', videoId: 'dA1B-zwWIMQ', duration: 10574 },
+                    { id: 'geo-clase-5', title: 'Clase 5 Geoquímica', videoId: 'LFyo60_ut-U', duration: 11246 },
+                    { id: 'geo-clase-6', title: 'Clase 6 Geoquímica', videoId: 'tEamqhzMA0A', duration: 11975 }
+                ]
+            },
+            'curso-iogas': {
+                title: 'Curso: ioGAS MinexField',
+                type: 'video',
+                data: [
+                    { id: 'iogas-clase-1', title: 'ioGAS MinexField Pt1', videoId: '2GCFoiOBtHA', duration: 11399 },
+                    { id: 'iogas-clase-2', title: 'ioGAS MinexField Pt2', videoId: 'RwPwygOcaUo', duration: 11170 },
+                    { id: 'iogas-clase-3', title: 'ioGAS MinexField Pt3', videoId: 'eZaRLSw7H-E', duration: 10903 },
+                    { id: 'iogas-clase-4', title: 'ioGAS MinexField Pt4', videoId: 'HWttKuijkz4', duration: 13253 },
+                ]
+            }
+        };
+
+        // --- PANTALLA DE SELECCIÓN DE CURSO ---
+        function renderCourseSelection(user) {
+            const courseList = document.getElementById('course-list');
+            courseList.innerHTML = '';
+            for (const courseId in courses) {
+                const course = courses[courseId];
+                const card = document.createElement('div');
+                card.className = 'bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer';
+                card.innerHTML = `<h3 class="text-xl font-bold">${course.title}</h3><p class="text-gray-600 mt-2">Tipo: Curso en Video</p>`;
+                card.onclick = () => {
+                    courseSelectionContainer.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+                    initializeApp(user, courseId);
+                };
+                courseList.appendChild(card);
+            }
+        }
+
+        // --- LÓGICA PRINCIPAL DE LA APP ---
+        function initializeApp(user, courseId) {
+            const course = courses[courseId];
+            if (!course || course.type !== 'video') return;
+
+            // --- LÓGICA COMÚN ---
+            let progressData = [];
+            const progressDocRef = db.collection('users').doc(user.uid).collection('progress').doc(courseId);
+
+            async function loadProgress() {
+                const doc = await progressDocRef.get();
+                if (doc.exists && doc.data().modules) {
+                    progressData = doc.data().modules;
+                } else {
+                    // Inicializa la estructura de progreso si no existe
+                    progressData = course.data.map(item => ({ 
+                        ...item, 
+                        submodules: generateSubmodules(item.id, item.duration).map(sub => ({...sub, completed: false}))
+                    }));
                 }
-                return `${pad(minutes)}:${pad(seconds)}`;
             }
 
-            // Genera los submódulos para una clase
-            function generateSubmodules(classId, durationInSeconds, chunkDuration = 1800) { // chunkDuration = 30 minutos
-                const submodules = [];
-                let part = 1;
-                for (let i = 0; i < durationInSeconds; i += chunkDuration) {
-                    const startTime = i;
-                    const endTime = Math.min(i + chunkDuration, durationInSeconds);
-                    submodules.push({
-                        id: `${classId}-part-${part}`,
-                        text: `Parte ${part} (${formatTime(startTime)} - ${formatTime(endTime)})`,
-                        startTime: startTime,
-                        completed: false
-                    });
-                    part++;
-                }
-                return submodules;
+            async function saveProgress() {
+                // Guardamos solo los datos relevantes para evitar sobreescribir con datos de la UI
+                const dataToSave = progressData.map(module => ({
+                    id: module.id,
+                    submodules: module.submodules.map(sub => ({ id: sub.id, completed: sub.completed }))
+                }));
+                await progressDocRef.set({ modules: dataToSave });
             }
+            
+            // --- RENDERIZADOR DEL VISOR DE VIDEO ---
+            appContainer.innerHTML = `
+                <header class="mb-8 flex justify-between items-center">
+                    <div><h1 class="text-3xl md:text-4xl font-bold text-gray-900">${course.title}</h1><p class="text-gray-600 mt-2">Sesión iniciada como: ${user.email}</p></div>
+                    <div><button id="back-to-courses" class="mr-4 px-4 py-2 font-semibold text-white bg-gray-600 rounded-lg hover:bg-gray-700">Volver</button><button id="logout-button" class="px-4 py-2 font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700">Cerrar Sesión</button></div>
+                </header>
+                <div class="mb-8"><div class="flex justify-between mb-1"><span class="text-base font-medium text-blue-700">Progreso Total</span><span id="progress-text" class="text-sm font-medium text-blue-700">0%</span></div><div class="w-full bg-gray-200 rounded-full h-4"><div id="progress-bar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div></div></div>
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <main class="w-full lg:w-2/3"><div class="aspect-w-16 aspect-h-9 bg-black rounded-lg shadow-lg overflow-hidden"><iframe id="video-player" class="w-full h-full" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div><div class="mt-4 p-4 bg-white rounded-lg shadow"><h2 id="video-title" class="text-2xl font-bold"></h2><p class="text-gray-600 mt-2">Selecciona un submódulo para comenzar.</p></div></main>
+                    <aside class="w-full lg:w-1/3 bg-white p-4 sm:p-6 rounded-lg shadow-lg"><h3 class="text-xl font-bold mb-4 border-b pb-2">Clases y Submódulos</h3><div id="video-modules" class="space-y-4 h-[70vh] overflow-y-auto pr-2"></div></aside>
+                </div>`;
 
-            // --- DATOS DEL CURSO CON DURACIONES PRECISAS ---
-            const courseData = [
-                { id: 'clase-1', title: 'Clase 1: Geoquímica Aplicada', videoId: 'dnb9A-x3_Gw', duration: 9953 },    // 2h 45m 53s
-                { id: 'clase-2', title: 'Clase 2: Geoquímica Aplicada', videoId: 'VjlyimLC8dI', duration: 10178 },   // 2h 49m 38s
-                { id: 'clase-3', title: 'Clase 3: Geoquímica', videoId: '2y6ZRW6X2Ow', duration: 10359 }, // 2h 52m 39s
-                { id: 'clase-4', title: 'Clase 4: Geoquímica', videoId: 'dA1B-zwWIMQ', duration: 10574 }, // 2h 56m 14s
-                { id: 'clase-5', title: 'Clase 5: Geoquímica', videoId: 'LFyo60_ut-U', duration: 11246 }, // 3h 07m 26s
-                { id: 'clase-6', title: 'Clase 6: Geoquímica', videoId: 'tEamqhzMA0A', duration: 11975 }  // 3h 19m 35s
-            ];
-
-            // Añadir submódulos a cada clase con su duración específica
-            courseData.forEach(module => {
-                module.submodules = generateSubmodules(module.id, module.duration);
+            document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+            document.getElementById('back-to-courses').addEventListener('click', () => {
+                appContainer.innerHTML = ''; // Limpiar la UI del curso
+                appContainer.classList.add('hidden');
+                courseSelectionContainer.classList.remove('hidden');
             });
 
-            // --- VARIABLES GLOBALES ---
-            const modulesContainer = document.getElementById('course-modules');
+            const modulesContainer = document.getElementById('video-modules');
             const videoPlayer = document.getElementById('video-player');
             const videoTitle = document.getElementById('video-title');
             const progressBar = document.getElementById('progress-bar');
             const progressText = document.getElementById('progress-text');
-            let currentProgress = [];
+            
+            function formatTime(totalSeconds) {
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+                const pad = (num) => num.toString().padStart(2, '0');
+                if (hours > 0) return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+                return `${pad(minutes)}:${pad(seconds)}`;
+            }
 
-            // --- FUNCIONES DE MANEJO DE DATOS ---
-
-            function loadProgress() {
-                const savedProgress = localStorage.getItem('courseProgress');
-                if (savedProgress) {
-                    currentProgress = JSON.parse(savedProgress);
-                    // Sincronizar por si los módulos cambiaron
-                    courseData.forEach((module, moduleIndex) => {
-                        module.submodules.forEach((submodule, subIndex) => {
-                           if (currentProgress[moduleIndex] && currentProgress[moduleIndex].submodules && currentProgress[moduleIndex].submodules[subIndex]) {
-                                submodule.completed = currentProgress[moduleIndex].submodules[subIndex].completed;
-                           }
-                        });
-                    });
-                } else {
-                    currentProgress = JSON.parse(JSON.stringify(courseData));
+            function generateSubmodules(classId, durationInSeconds, chunkDuration = 1800) {
+                const submodules = [];
+                for (let i = 0; i < durationInSeconds; i += chunkDuration) {
+                    submodules.push({ id: `${classId}-part-${submodules.length + 1}`, startTime: i, text: `Parte ${submodules.length + 1} (${formatTime(i)} - ${formatTime(Math.min(i + chunkDuration, durationInSeconds))})` });
                 }
+                return submodules;
             }
-
-            function saveProgress() {
-                localStorage.setItem('courseProgress', JSON.stringify(currentProgress));
-            }
-
-            // --- FUNCIONES DE UI ---
-
+            
             function updateProgressBar() {
                 let completedCount = 0;
                 let totalCount = 0;
-                currentProgress.forEach(module => {
-                    module.submodules.forEach(submodule => {
+                progressData.forEach(module => {
+                    module.submodules.forEach(sub => {
                         totalCount++;
-                        if (submodule.completed) completedCount++;
+                        if (sub.completed) completedCount++;
                     });
                 });
                 const percentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
                 progressBar.style.width = `${percentage}%`;
                 progressText.textContent = `${Math.round(percentage)}%`;
             }
-
+            
             function changeVideo(videoId, startTime, classTitle) {
                 videoPlayer.src = `https://www.youtube.com/embed/${videoId}?start=${startTime}&autoplay=1`;
                 videoTitle.textContent = classTitle;
             }
-
+            
             function renderModules() {
                 modulesContainer.innerHTML = '';
-                currentProgress.forEach((module, moduleIndex) => {
+                progressData.forEach((module, moduleIndex) => {
                     const moduleElement = document.createElement('div');
                     moduleElement.className = 'border rounded-lg overflow-hidden';
-                    
                     const titleContainer = document.createElement('div');
-                    titleContainer.className = 'p-3 bg-gray-50 hover:bg-gray-200 cursor-pointer flex justify-between items-center transition-colors';
-                    titleContainer.innerHTML = `<h4 class="font-semibold">${module.title}</h4><svg class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
-                    
+                    titleContainer.className = 'p-3 bg-gray-50 hover:bg-gray-200 cursor-pointer flex justify-between items-center';
+                    titleContainer.innerHTML = `<h4 class="font-semibold">${module.title}</h4><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
                     const submodulesList = document.createElement('ul');
                     submodulesList.className = 'p-4 space-y-3 bg-white hidden';
                     
                     module.submodules.forEach((submodule, subIndex) => {
                         const item = document.createElement('li');
                         item.className = 'flex items-center justify-between';
-                        
                         const checkboxLabelWrapper = document.createElement('div');
                         checkboxLabelWrapper.className = 'flex items-center';
-
                         const checkbox = document.createElement('input');
                         checkbox.type = 'checkbox';
                         checkbox.id = submodule.id;
                         checkbox.checked = submodule.completed;
-                        checkbox.className = 'h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer';
-                        
+                        checkbox.className = 'h-5 w-5 rounded border-gray-300 text-blue-600';
                         const label = document.createElement('label');
                         label.htmlFor = submodule.id;
                         label.textContent = submodule.text;
-                        label.className = `ml-3 block text-sm text-gray-700 cursor-pointer ${submodule.completed ? 'task-completed' : ''}`;
-                        
-                        checkbox.addEventListener('change', () => {
-                            currentProgress[moduleIndex].submodules[subIndex].completed = checkbox.checked;
-                            label.classList.toggle('task-completed', checkbox.checked);
-                            saveProgress();
+                        label.className = `ml-3 text-sm ${submodule.completed ? 'module-completed' : ''}`;
+                        checkbox.addEventListener('change', async () => {
+                            progressData[moduleIndex].submodules[subIndex].completed = checkbox.checked;
+                            label.classList.toggle('module-completed', checkbox.checked);
+                            await saveProgress();
                             updateProgressBar();
                         });
-
                         const watchButton = document.createElement('button');
                         watchButton.textContent = 'Ver';
-                        watchButton.className = 'ml-4 bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 transition-colors text-xs font-medium';
+                        watchButton.className = 'ml-4 bg-blue-500 text-white px-3 py-1 rounded-md text-xs';
                         watchButton.onclick = () => changeVideo(module.videoId, submodule.startTime, module.title);
-
-                        checkboxLabelWrapper.appendChild(checkbox);
-                        checkboxLabelWrapper.appendChild(label);
-                        item.appendChild(checkboxLabelWrapper);
-                        item.appendChild(watchButton);
+                        checkboxLabelWrapper.append(checkbox, label);
+                        item.append(checkboxLabelWrapper, watchButton);
                         submodulesList.appendChild(item);
                     });
-
+                    
                     titleContainer.addEventListener('click', () => {
                         submodulesList.classList.toggle('hidden');
                         titleContainer.querySelector('svg').classList.toggle('rotate-180');
                     });
-
-                    moduleElement.appendChild(titleContainer);
-                    moduleElement.appendChild(submodulesList);
+                    moduleElement.append(titleContainer, submodulesList);
                     modulesContainer.appendChild(moduleElement);
                 });
             }
 
-            // --- INICIALIZACIÓN ---
-            function init() {
-                loadProgress();
+            async function init() {
+                await loadProgress();
+                
+                // Sincronizar la estructura de submódulos con los datos guardados
+                progressData.forEach((module, index) => {
+                    const courseModuleData = course.data.find(m => m.id === module.id);
+                    if (courseModuleData) {
+                        const freshSubmodules = generateSubmodules(module.id, courseModuleData.duration);
+                        freshSubmodules.forEach(freshSub => {
+                            const savedSub = module.submodules.find(s => s.id === freshSub.id);
+                            freshSub.completed = savedSub ? savedSub.completed : false;
+                        });
+                        progressData[index].submodules = freshSubmodules;
+                    }
+                });
+
                 renderModules();
                 updateProgressBar();
-                const firstModule = modulesContainer.querySelector('.border');
-                if (firstModule) {
-                    firstModule.querySelector('ul').classList.remove('hidden');
-                    firstModule.querySelector('svg').classList.add('rotate-180');
+                if(course.data.length > 0) {
+                    changeVideo(course.data[0].videoId, 0, course.data[0].title);
                 }
             }
-
+            
             init();
-        });
+        }
     </script>
 </body>
 </html>
