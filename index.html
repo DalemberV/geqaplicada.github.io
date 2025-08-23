@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma de Cursos</title>
+    <title>Plataforma de Cursos Avanzada</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Quill Rich Text Editor -->
@@ -14,8 +14,10 @@
         .module-completed { text-decoration: line-through; color: #9ca3af; }
         #loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Quill Editor Height */
         .ql-container { height: 300px; }
+        .favorite-star { cursor: pointer; color: #d1d5db; transition: color 0.2s; }
+        .favorite-star.favorited { color: #f59e0b; }
+        #gemini-panel { transition: transform 0.3s ease-in-out; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -48,11 +50,32 @@
     <!-- Contenido Principal del Curso -->
     <div id="app-container" class="hidden container mx-auto p-4 md:p-8"></div>
 
+    <!-- Botón Flotante para Asistente Gemini -->
+    <button id="gemini-fab" class="hidden fixed bottom-8 right-8 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-transform hover:scale-110 z-20">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+    </button>
+
+    <!-- Panel Desplegable Gemini -->
+    <div id="gemini-panel" class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl transform translate-x-full z-30 flex flex-col">
+        <header class="p-4 border-b flex justify-between items-center bg-gray-50">
+            <h3 class="text-lg font-bold">Asistente de Estudio Gemini</h3>
+            <button id="close-gemini-panel" class="text-gray-500 hover:text-gray-800">&times;</button>
+        </header>
+        <div id="gemini-chat-history" class="p-4 flex-grow overflow-y-auto"></div>
+        <footer class="p-4 border-t bg-gray-50">
+            <div class="flex gap-2">
+                <input id="gemini-prompt-input" type="text" class="flex-grow border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Escribe tu pregunta...">
+                <button id="gemini-send-button" class="px-4 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">Enviar</button>
+            </div>
+        </footer>
+    </div>
+
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-
+    
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyD3bq6JJNZRjwDiF4FIMq7ZlWM-DI2YIqE",
@@ -83,6 +106,7 @@
                 authContainer.classList.remove('hidden');
                 courseSelectionContainer.classList.add('hidden');
                 appContainer.classList.add('hidden');
+                document.getElementById('gemini-fab').classList.add('hidden');
             }
         });
 
@@ -95,6 +119,7 @@
             'curso-geoquimica': {
                 title: 'Curso: Geoquímica Aplicada',
                 type: 'video',
+                imageUrl: 'https://images.unsplash.com/photo-1572643520125-f593385b9253?q=80&w=2070&auto=format&fit=crop',
                 data: [
                     { id: 'geo-clase-1', title: 'Clase 1 Geoquímica Aplicada', videoId: 'dnb9A-x3_Gw', duration: 9953 },
                     { id: 'geo-clase-2', title: 'Clase 2 Geoquímica Aplicada', videoId: 'VjlyimLC8dI', duration: 10178 },
@@ -107,6 +132,7 @@
             'curso-iogas': {
                 title: 'Curso: ioGAS MinexField',
                 type: 'video',
+                imageUrl: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?q=80&w=1974&auto=format&fit=crop',
                 data: [
                     { id: 'iogas-clase-1', title: 'ioGAS MinexField Pt1', videoId: '2GCFoiOBtHA', duration: 11399 },
                     { id: 'iogas-clase-2', title: 'ioGAS MinexField Pt2', videoId: 'RwPwygOcaUo', duration: 11170 },
@@ -122,8 +148,8 @@
             for (const courseId in courses) {
                 const course = courses[courseId];
                 const card = document.createElement('div');
-                card.className = 'bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer';
-                card.innerHTML = `<h3 class="text-xl font-bold">${course.title}</h3><p class="text-gray-600 mt-2">Tipo: Curso en Video</p>`;
+                card.className = 'bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer overflow-hidden';
+                card.innerHTML = `<img src="${course.imageUrl}" alt="${course.title}" class="w-full h-40 object-cover"><div class="p-6"><h3 class="text-xl font-bold">${course.title}</h3><p class="text-gray-600 mt-2">Tipo: Curso en Video</p></div>`;
                 card.onclick = () => {
                     courseSelectionContainer.classList.add('hidden');
                     appContainer.classList.remove('hidden');
@@ -147,21 +173,20 @@
                     loadedModules = doc.data().modules;
                 }
                 
-                // Merge course data with loaded progress to ensure structure is always up-to-date
                 progressData = course.data.map(courseModule => {
                     const savedModule = loadedModules.find(m => m.id === courseModule.id);
                     const submodules = generateSubmodules(courseModule.id, courseModule.duration);
                     
                     if (savedModule) {
                         submodules.forEach(sub => {
-                            const savedSub = savedModule.submodules.find(s => s.id === sub.id);
+                            const savedSub = savedModule.submodules && savedModule.submodules.find(s => s.id === sub.id);
                             sub.completed = savedSub ? savedSub.completed : false;
                         });
                     } else {
                          submodules.forEach(sub => sub.completed = false);
                     }
                     
-                    return { ...courseModule, submodules, notes: savedModule ? savedModule.notes : '' };
+                    return { ...courseModule, submodules, notes: savedModule ? savedModule.notes : '', favorited: savedModule ? savedModule.favorited : false };
                 });
             }
 
@@ -169,6 +194,7 @@
                 const dataToSave = progressData.map(module => ({
                     id: module.id,
                     notes: module.notes || '',
+                    favorited: module.favorited || false,
                     submodules: module.submodules.map(sub => ({ id: sub.id, completed: sub.completed }))
                 }));
                 await progressDocRef.set({ modules: dataToSave });
@@ -181,7 +207,7 @@
                 </header>
                 <div class="mb-8"><div class="flex justify-between mb-1"><span class="text-base font-medium text-blue-700">Progreso Total</span><span id="progress-text" class="text-sm font-medium text-blue-700">0%</span></div><div class="w-full bg-gray-200 rounded-full h-4"><div id="progress-bar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div></div></div>
                 <div class="flex flex-col lg:flex-row gap-8">
-                    <main class="w-full lg:w-3/5"><div class="aspect-w-16 aspect-h-9 bg-black rounded-lg shadow-lg overflow-hidden"><iframe id="video-player" class="w-full h-full" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div><div class="mt-4 p-4 bg-white rounded-lg shadow"><h2 id="video-title" class="text-2xl font-bold"></h2><p class="text-gray-600 mt-2">Selecciona un submódulo para comenzar.</p></div></main>
+                    <main class="w-full lg:w-3/5"><div class="relative" style="padding-top: 56.25%;"><iframe id="video-player" class="absolute top-0 left-0 w-full h-full rounded-lg shadow-lg" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div><div class="mt-4 p-4 bg-white rounded-lg shadow"><h2 id="video-title" class="text-2xl font-bold"></h2><p class="text-gray-600 mt-2">Selecciona un submódulo para comenzar.</p></div></main>
                     <aside class="w-full lg:w-2/5 bg-white p-4 sm:p-6 rounded-lg shadow-lg"><h3 class="text-xl font-bold mb-4 border-b pb-2">Clases y Submódulos</h3><div id="video-modules" class="space-y-4 h-[80vh] overflow-y-auto pr-2"></div></aside>
                 </div>`;
 
@@ -189,6 +215,7 @@
             document.getElementById('back-to-courses').addEventListener('click', () => {
                 appContainer.innerHTML = '';
                 appContainer.classList.add('hidden');
+                document.getElementById('gemini-fab').classList.add('hidden');
                 courseSelectionContainer.classList.remove('hidden');
             });
 
@@ -241,7 +268,7 @@
                     moduleElement.className = 'border rounded-lg overflow-hidden';
                     const titleContainer = document.createElement('div');
                     titleContainer.className = 'p-3 bg-gray-50 hover:bg-gray-200 cursor-pointer flex justify-between items-center';
-                    titleContainer.innerHTML = `<h4 class="font-semibold">${module.title}</h4><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+                    titleContainer.innerHTML = `<h4 class="font-semibold">${module.title}</h4><div class="flex items-center gap-2"><span id="star-${module.id}" class="favorite-star ${module.favorited ? 'favorited' : ''}">&#9733;</span><svg class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>`;
                     
                     const contentContainer = document.createElement('div');
                     contentContainer.className = 'p-4 space-y-4 bg-white hidden';
@@ -278,7 +305,6 @@
                         submodulesList.appendChild(item);
                     });
                     
-                    // Notes Editor
                     const notesHeader = document.createElement('h5');
                     notesHeader.className = 'font-semibold mt-4 pt-4 border-t';
                     notesHeader.textContent = 'Mis Apuntes para esta Clase';
@@ -287,35 +313,103 @@
                     
                     contentContainer.append(submodulesList, notesHeader, editorContainer);
                     
-                    titleContainer.addEventListener('click', () => {
+                    titleContainer.addEventListener('click', (e) => {
+                        if (e.target.id.startsWith('star-')) return;
                         contentContainer.classList.toggle('hidden');
                         titleContainer.querySelector('svg').classList.toggle('rotate-180');
                     });
+
+                    const starElement = titleContainer.querySelector(`#star-${module.id}`);
+                    starElement.addEventListener('click', async () => {
+                        progressData[moduleIndex].favorited = !progressData[moduleIndex].favorited;
+                        starElement.classList.toggle('favorited', progressData[moduleIndex].favorited);
+                        await saveProgress();
+                    });
+
                     moduleElement.append(titleContainer, contentContainer);
                     modulesContainer.appendChild(moduleElement);
 
-                    // Initialize Quill Editor
-                    const quill = new Quill(`#editor-${module.id}`, {
-                        theme: 'snow',
-                        placeholder: 'Escribe tus notas aquí...'
-                    });
+                    const quill = new Quill(`#editor-${module.id}`, { theme: 'snow', placeholder: 'Escribe tus notas aquí...' });
                     if (module.notes) {
                         quill.root.innerHTML = module.notes;
                     }
 
-                    // Auto-save notes
                     let timeout;
                     quill.on('text-change', () => {
                         clearTimeout(timeout);
                         timeout = setTimeout(async () => {
                             progressData[moduleIndex].notes = quill.root.innerHTML;
                             await saveProgress();
-                        }, 1000); // Save 1 second after user stops typing
+                        }, 1500);
                     });
                 });
             }
 
+            // --- GEMINI CHAT LOGIC ---
+            const geminiFab = document.getElementById('gemini-fab');
+            const geminiPanel = document.getElementById('gemini-panel');
+            const closeGeminiPanel = document.getElementById('close-gemini-panel');
+            const geminiHistory = document.getElementById('gemini-chat-history');
+            const geminiInput = document.getElementById('gemini-prompt-input');
+            const geminiSend = document.getElementById('gemini-send-button');
+            const GEMINI_API_KEY = "AIzaSyBRW_Q7y7kOZYkKN_WFHCtUnF9OYeoynNw";
+
+            geminiFab.onclick = () => {
+                geminiPanel.classList.remove('translate-x-full');
+                if (geminiHistory.children.length === 0) {
+                    const initialPrompt = `Hola, soy tu asistente de estudio. El curso actual es sobre "${course.title}". Puedes pedirme que genere un temario, que resuma un concepto clave o que te haga preguntas para repasar. ¿Cómo puedo ayudarte?`;
+                    addMessageToHistory(initialPrompt, 'gemini');
+                }
+            };
+            closeGeminiPanel.onclick = () => geminiPanel.classList.add('translate-x-full');
+            geminiSend.onclick = handleGeminiPrompt;
+            geminiInput.onkeyup = (e) => { if (e.key === 'Enter') handleGeminiPrompt(); };
+
+            function addMessageToHistory(message, sender, isLoading = false) {
+                const messageDiv = document.createElement('div');
+                let content = message.replace(/\n/g, '<br>');
+                if (isLoading) {
+                    content = `<div class="flex items-center gap-2"><div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div><div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-75"></div><div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-150"></div></div>`;
+                }
+                messageDiv.className = `p-3 my-2 rounded-lg max-w-[80%] ${sender === 'user' ? 'bg-blue-100 ml-auto' : 'bg-gray-100 mr-auto'}`;
+                messageDiv.innerHTML = content;
+                if(isLoading) messageDiv.id = 'loading-indicator';
+                geminiHistory.appendChild(messageDiv);
+                geminiHistory.scrollTop = geminiHistory.scrollHeight;
+            }
+
+            async function handleGeminiPrompt() {
+                const prompt = geminiInput.value.trim();
+                if (!prompt) return;
+                addMessageToHistory(prompt, 'user');
+                geminiInput.value = '';
+                geminiSend.disabled = true;
+                addMessageToHistory('', 'gemini', true);
+
+                const fullPrompt = `Contexto: Soy un estudiante tomando un curso sobre "${course.title}". Pregunta: ${prompt}`;
+                
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
+                    });
+                    if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                    const data = await response.json();
+                    const geminiResponse = data.candidates[0].content.parts[0].text;
+                    document.getElementById('loading-indicator')?.remove();
+                    addMessageToHistory(geminiResponse, 'gemini');
+                } catch (error) {
+                    console.error("Gemini API Error:", error);
+                    document.getElementById('loading-indicator')?.remove();
+                    addMessageToHistory("Lo siento, hubo un error al contactar al asistente. Por favor, revisa la configuración de la API Key.", 'gemini');
+                } finally {
+                    geminiSend.disabled = false;
+                }
+            }
+
             async function init() {
+                geminiFab.classList.remove('hidden');
                 await loadProgress();
                 renderModules();
                 updateProgressBar();
